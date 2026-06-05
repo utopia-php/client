@@ -9,6 +9,7 @@ use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\NetworkExceptionInterface;
 use ReflectionMethod;
 use Utopia\Client\Adapter\Curl\Client;
+use Utopia\Client\Exception\TimeoutException;
 use Utopia\Psr7\Request;
 use Utopia\Psr7\Response;
 use Utopia\Psr7\Stream;
@@ -146,6 +147,30 @@ final class ClientTest extends TestCase
         $this->expectException(NetworkExceptionInterface::class);
 
         $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port));
+    }
+
+    public function testItThrowsTimeoutExceptionsForTimedOutRequests(): void
+    {
+        if (!\extension_loaded('curl')) {
+            self::markTestSkipped('The curl extension is not installed.');
+        }
+
+        $port = $this->availablePort();
+        $server = $this->startServer($port);
+
+        try {
+            $requestFactory = new Request\Factory();
+            $client = new Client(new Response\Factory(), new Stream\Factory(), [
+                \CURLOPT_TIMEOUT_MS => 100,
+            ]);
+
+            $this->expectException(TimeoutException::class);
+
+            $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/slow'));
+        } finally {
+            proc_terminate($server);
+            proc_close($server);
+        }
     }
 
     public function testItParsesTheFinalCurlHeaderBlock(): void

@@ -15,6 +15,7 @@ use Throwable;
 use Utopia\Client\Adapter;
 use Utopia\Client\Exception\NetworkException;
 use Utopia\Client\Exception\RequestException;
+use Utopia\Client\Exception\TimeoutException;
 use Utopia\Client\Response\Builder as ResponseBuilder;
 use Utopia\Psr7\Response;
 use Utopia\Psr7\Stream;
@@ -106,7 +107,12 @@ class Client implements Adapter
         if ($result === false) {
             $message = \is_string($client->errMsg) && $client->errMsg !== '' ? $client->errMsg : 'Swoole request failed.';
             $code = \is_int($client->errCode) ? $client->errCode : 0;
+            $statusCode = $client->statusCode;
             $client->close();
+
+            if ($this->isTimeout($message, $code, $statusCode)) {
+                throw new TimeoutException($request, $message, $code);
+            }
 
             throw new NetworkException($request, $message, $code);
         }
@@ -175,6 +181,19 @@ class Client implements Adapter
         }
 
         return $path . '?' . $query;
+    }
+
+    private function isTimeout(string $message, int $code, mixed $statusCode): bool
+    {
+        if (\is_int($statusCode) && $statusCode === -2) {
+            return true;
+        }
+
+        if ($code === 110) {
+            return true;
+        }
+
+        return str_contains(strtolower($message), 'timeout');
     }
 
     /**

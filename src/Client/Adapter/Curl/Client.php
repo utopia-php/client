@@ -13,6 +13,7 @@ use Psr\Http\Message\StreamFactoryInterface;
 use Utopia\Client\Adapter;
 use Utopia\Client\Exception\NetworkException;
 use Utopia\Client\Exception\RequestException;
+use Utopia\Client\Exception\TimeoutException;
 use Utopia\Client\Response\Builder as ResponseBuilder;
 use Utopia\Psr7\Response;
 use Utopia\Psr7\Stream;
@@ -87,6 +88,10 @@ class Client implements Adapter
         if ($result === false) {
             $message = curl_error($handle);
             $code = curl_errno($handle);
+
+            if ($code === \CURLE_OPERATION_TIMEDOUT) {
+                throw new TimeoutException($request, $message === '' ? 'Curl request timed out.' : $message, $code);
+            }
 
             throw new NetworkException($request, $message === '' ? 'Curl request failed.' : $message, $code);
         }

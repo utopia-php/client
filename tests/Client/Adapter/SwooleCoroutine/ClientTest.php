@@ -10,6 +10,7 @@ use Psr\Http\Client\NetworkExceptionInterface;
 use Swoole\Coroutine;
 use Throwable;
 use Utopia\Client\Adapter\SwooleCoroutine\Client;
+use Utopia\Client\Exception\TimeoutException;
 use Utopia\Psr7\Request;
 use Utopia\Psr7\Response;
 use Utopia\Psr7\Stream;
@@ -137,6 +138,35 @@ final class ClientTest extends TestCase
         });
 
         $this->assertInstanceOf(NetworkExceptionInterface::class, $thrown);
+    }
+
+    public function testItThrowsTimeoutExceptionsForTimedOutRequests(): void
+    {
+        if (!\extension_loaded('swoole')) {
+            self::markTestSkipped('The swoole extension is not installed.');
+        }
+
+        $port = $this->availablePort();
+        $server = $this->startServer($port);
+
+        try {
+            Coroutine\run(function () use ($port): void {
+                $requestFactory = new Request\Factory();
+                $client = new Client(new Response\Factory(), new Stream\Factory(), [
+                    'timeout' => 0.1,
+                ]);
+
+                try {
+                    $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/slow'));
+                    self::fail('Expected a timeout exception.');
+                } catch (Throwable $throwable) {
+                    $this->assertInstanceOf(TimeoutException::class, $throwable);
+                }
+            });
+        } finally {
+            proc_terminate($server);
+            proc_close($server);
+        }
     }
 
     /**

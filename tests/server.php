@@ -48,6 +48,15 @@ if ($path === '/binary') {
     return;
 }
 
+if ($path === '/slow') {
+    sleep(1);
+    http_response_code(200);
+    header('Content-Type: text/plain;charset=UTF-8');
+    echo 'slow';
+
+    return;
+}
+
 http_response_code(202);
 header('Content-Type: text/plain;charset=UTF-8');
 
