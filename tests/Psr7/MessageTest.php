@@ -7,16 +7,16 @@ namespace Utopia\Tests\Psr7;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Utopia\Psr7\RequestFactory;
-use Utopia\Psr7\ResponseFactory;
+use Utopia\Psr7\Request;
+use Utopia\Psr7\Response;
 use Utopia\Psr7\Stream;
-use Utopia\Psr7\UriFactory;
+use Utopia\Psr7\Uri;
 
 final class MessageTest extends TestCase
 {
     public function testHeadersAreImmutableCaseInsensitiveAndPreserveOriginalCase(): void
     {
-        $response = new ResponseFactory()->createResponse()
+        $response = new Response\Factory()->createResponse()
             ->withHeader('X-Test', 'one');
 
         $changed = $response
@@ -41,13 +41,13 @@ final class MessageTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new ResponseFactory()->createResponse()->withHeader("Bad\nHeader", 'value');
+        new Response\Factory()->createResponse()->withHeader("Bad\nHeader", 'value');
     }
 
     public function testRequestFactorySetsHostAndWithUriHonorsPreserveHostRules(): void
     {
-        $requestFactory = new RequestFactory();
-        $uriFactory = new UriFactory();
+        $requestFactory = new Request\Factory();
+        $uriFactory = new Uri\Factory();
 
         $request = $requestFactory->createRequest('GET', 'https://example.com:8443/users?active=1');
 
@@ -74,7 +74,7 @@ final class MessageTest extends TestCase
 
     public function testUriAuthorityDefaultPortsAndStringOutput(): void
     {
-        $uri = new UriFactory()->createUri('HTTPS://user:pass@example.com:443/a path?x=1#frag');
+        $uri = new Uri\Factory()->createUri('HTTPS://user:pass@example.com:443/a path?x=1#frag');
 
         $this->assertSame('https', $uri->getScheme());
         $this->assertSame('user:pass@example.com', $uri->getAuthority());

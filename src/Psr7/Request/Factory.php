@@ -2,16 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Utopia\Client\Request;
+namespace Utopia\Psr7\Request;
 
 use JsonException;
 use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Message\UriFactoryInterface;
 use Psr\Http\Message\UriInterface;
-use Utopia\Client\Request\Multipart\Part;
+use Utopia\Psr7\Request;
+use Utopia\Psr7\Request\Multipart\Part;
+use Utopia\Psr7\Stream;
+use Utopia\Psr7\Uri;
 
-final readonly class Builder
+final readonly class Factory implements RequestFactoryInterface
 {
     private const string HEADER_ACCEPT = 'Accept';
 
@@ -24,9 +28,17 @@ final readonly class Builder
     private const string CONTENT_TYPE_MULTIPART = 'multipart/form-data';
 
     public function __construct(
-        private RequestFactoryInterface $requestFactory,
-        private StreamFactoryInterface $streamFactory,
+        private UriFactoryInterface $uriFactory = new Uri\Factory(),
+        private StreamFactoryInterface $streamFactory = new Stream\Factory(),
     ) {}
+
+    public function createRequest(string $method, $uri): RequestInterface
+    {
+        $uri = $uri instanceof UriInterface ? $uri : $this->uriFactory->createUri((string) $uri);
+
+        return new Request(strtoupper($method), $uri)
+            ->withUri($uri);
+    }
 
     /**
      * @param array<string, string|array<int, string>> $headers
@@ -37,7 +49,7 @@ final readonly class Builder
     {
         $request = $this->body($method, $uri, json_encode($data, JSON_THROW_ON_ERROR), self::CONTENT_TYPE_JSON, $headers);
 
-        if (!$request->hasHeader('Accept')) {
+        if (!$request->hasHeader(self::HEADER_ACCEPT)) {
             return $request->withHeader(self::HEADER_ACCEPT, self::CONTENT_TYPE_JSON);
         }
 
@@ -65,7 +77,7 @@ final readonly class Builder
     public function body(string $method, UriInterface|string $uri, string $body, string $contentType, array $headers = []): RequestInterface
     {
         $request = $this->applyHeaders(
-            $this->requestFactory->createRequest($method, $uri),
+            $this->createRequest($method, $uri),
             $headers,
         )->withBody($this->streamFactory->createStream($body));
 
@@ -83,7 +95,7 @@ final readonly class Builder
     public function query(string $method, UriInterface|string $uri, array $parameters, array $headers = []): RequestInterface
     {
         $request = $this->applyHeaders(
-            $this->requestFactory->createRequest($method, $uri),
+            $this->createRequest($method, $uri),
             $headers,
         );
 
@@ -109,7 +121,7 @@ final readonly class Builder
     {
         $boundary = $this->boundary();
         $request = $this->applyHeaders(
-            $this->requestFactory->createRequest($method, $uri),
+            $this->createRequest($method, $uri),
             $headers,
         )->withBody($this->streamFactory->createStream($this->multipartBody($boundary, $parts)));
 

@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Utopia\Psr7;
+namespace Utopia\Psr7\Stream;
 
 use InvalidArgumentException;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
+use Utopia\Psr7\Stream;
 
-final class StreamFactory implements StreamFactoryInterface
+final class Factory implements StreamFactoryInterface
 {
     public function createStream(string $content = ''): StreamInterface
     {

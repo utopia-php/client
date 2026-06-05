@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Utopia\Client\Request\Multipart;
+namespace Utopia\Psr7\Request\Multipart;
 
 use RuntimeException;
 

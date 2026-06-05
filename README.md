@@ -8,7 +8,7 @@ It provides:
 - `Utopia\Client\Adapter\Curl\Client`, a cURL transport for regular PHP runtimes.
 - `Utopia\Client\Adapter\SwooleCoroutine\Client`, a Swoole coroutine transport.
 - `Utopia\Psr7\*` PSR-7 messages and PSR-17 factories.
-- Request builders for JSON, forms, query strings, raw bodies, and multipart uploads.
+- Request factories for JSON, forms, query strings, raw bodies, and multipart uploads.
 - Response decoders for JSON, form-encoded, and multipart payloads.
 
 HTTP/1.1 is preferred by default. Redirects are disabled by default so PSR-18 callers receive the response returned by the server.
@@ -28,18 +28,14 @@ Use `ext-curl` for the cURL adapter and `ext-swoole` for the Swoole coroutine ad
 
 use Utopia\Client;
 use Utopia\Client\Adapter\Curl\Client as CurlAdapter;
-use Utopia\Psr7\RequestFactory;
-use Utopia\Psr7\ResponseFactory;
-use Utopia\Psr7\StreamFactory;
+use Utopia\Psr7\Request;
 
 require __DIR__ . '/vendor/autoload.php';
 
-$requestFactory = new RequestFactory();
-$responseFactory = new ResponseFactory();
-$streamFactory = new StreamFactory();
+$requestFactory = new Request\Factory();
 
 $client = new Client(
-    new CurlAdapter($responseFactory, $streamFactory),
+    new CurlAdapter(),
 )
     ->withBaseUri('https://api.example.com/v1')
     ->withHeaders([
@@ -93,33 +89,31 @@ $client = $client->withBearerAuth('token');
 
 `withBaseUri()` resolves relative request URIs before sending. Absolute request URIs are left unchanged.
 
-## Request Builder
+## Request Factory
 
 ```php
 <?php
 
-use Utopia\Client\Request\Builder;
-use Utopia\Client\Request\Multipart\Part;
-use Utopia\Psr7\RequestFactory;
-use Utopia\Psr7\StreamFactory;
+use Utopia\Psr7\Request\Multipart\Part;
+use Utopia\Psr7\Request;
 
-$builder = new Builder(new RequestFactory(), new StreamFactory());
+$requestFactory = new Request\Factory();
 
-$json = $builder->json('POST', 'https://api.example.com/users', [
+$json = $requestFactory->json('POST', 'https://api.example.com/users', [
     'name' => 'Ada',
 ]);
 
-$form = $builder->form('POST', 'https://api.example.com/sessions', [
+$form = $requestFactory->form('POST', 'https://api.example.com/sessions', [
     'email' => 'ada@example.com',
     'password' => 'secret',
 ]);
 
-$query = $builder->query('GET', 'https://api.example.com/users?active=1', [
+$query = $requestFactory->query('GET', 'https://api.example.com/users?active=1', [
     'page' => 2,
     'search' => 'Ada Lovelace',
 ]);
 
-$upload = $builder->multipart('POST', 'https://api.example.com/uploads', [
+$upload = $requestFactory->multipart('POST', 'https://api.example.com/uploads', [
     'name' => 'Ada',
     'avatar' => Part::file('avatar', '/tmp/avatar.png', 'avatar.png', 'image/png'),
 ]);
@@ -130,7 +124,7 @@ Header overrides are explicit:
 ```php
 <?php
 
-$request = $builder->json('PATCH', 'https://api.example.com/users/1', [
+$request = $requestFactory->json('PATCH', 'https://api.example.com/users/1', [
     'name' => 'Ada',
 ], [
     'Accept' => 'application/vnd.api+json',
@@ -138,18 +132,14 @@ $request = $builder->json('PATCH', 'https://api.example.com/users/1', [
 ]);
 ```
 
-## Response Decoder
+## Decode Responses
 
 ```php
 <?php
 
-use Utopia\Client\Response\Decoder;
-
-$decoder = new Decoder();
-
-$data = $decoder->json($response);
-$form = $decoder->form($response);
-$parts = $decoder->multipart($response);
+$data = $response->json();
+$form = $response->form();
+$parts = $response->multipart();
 
 foreach ($parts as $part) {
     $name = $part->name();
@@ -175,14 +165,14 @@ The cURL adapter maps these to `CURLOPT_TIMEOUT_MS` and `CURLOPT_CONNECTTIMEOUT_
 
 ## Configure cURL
 
-Pass native cURL options as the third constructor argument. Options override adapter defaults when keys overlap.
+Pass native cURL options with the `options` constructor argument. Options override adapter defaults when keys overlap.
 
 ```php
 <?php
 
 use Utopia\Client\Adapter\Curl\Client as CurlAdapter;
 
-$adapter = new CurlAdapter($responseFactory, $streamFactory, [
+$adapter = new CurlAdapter(options: [
     CURLOPT_TIMEOUT_MS => 5_000,
     CURLOPT_CONNECTTIMEOUT_MS => 1_000,
     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_2_0,
@@ -204,19 +194,15 @@ The Swoole adapter must run inside a coroutine.
 use Swoole\Coroutine;
 use Utopia\Client;
 use Utopia\Client\Adapter\SwooleCoroutine\Client as SwooleAdapter;
-use Utopia\Psr7\RequestFactory;
-use Utopia\Psr7\ResponseFactory;
-use Utopia\Psr7\StreamFactory;
+use Utopia\Psr7\Request;
 
 require __DIR__ . '/vendor/autoload.php';
 
 Coroutine\run(static function (): void {
-    $requestFactory = new RequestFactory();
-    $responseFactory = new ResponseFactory();
-    $streamFactory = new StreamFactory();
+    $requestFactory = new Request\Factory();
 
     $client = new Client(
-        new SwooleAdapter($responseFactory, $streamFactory, [
+        new SwooleAdapter(settings: [
             'timeout' => 5,
             'connect_timeout' => 1,
         ]),

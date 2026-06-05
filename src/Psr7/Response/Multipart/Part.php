@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Utopia\Client\Response\Multipart;
+namespace Utopia\Psr7\Response\Multipart;
 
 final readonly class Part
 {

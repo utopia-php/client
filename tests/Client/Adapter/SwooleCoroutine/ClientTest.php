@@ -10,16 +10,16 @@ use Psr\Http\Client\NetworkExceptionInterface;
 use Swoole\Coroutine;
 use Throwable;
 use Utopia\Client\Adapter\SwooleCoroutine\Client;
-use Utopia\Psr7\RequestFactory;
-use Utopia\Psr7\ResponseFactory;
-use Utopia\Psr7\StreamFactory;
+use Utopia\Psr7\Request;
+use Utopia\Psr7\Response;
+use Utopia\Psr7\Stream;
 
 final class ClientTest extends TestCase
 {
     public function testItRequiresSwooleExtensionOrCoroutineContext(): void
     {
-        $requestFactory = new RequestFactory();
-        $client = new Client(new ResponseFactory(), new StreamFactory());
+        $requestFactory = new Request\Factory();
+        $client = new Client(new Response\Factory(), new Stream\Factory());
 
         $this->expectException(ClientExceptionInterface::class);
 
@@ -37,9 +37,9 @@ final class ClientTest extends TestCase
 
         try {
             Coroutine\run(function () use ($port): void {
-                $requestFactory = new RequestFactory();
-                $streamFactory = new StreamFactory();
-                $client = new Client(new ResponseFactory(), $streamFactory);
+                $requestFactory = new Request\Factory();
+                $streamFactory = new Stream\Factory();
+                $client = new Client(new Response\Factory(), $streamFactory);
                 $request = $requestFactory->createRequest('POST', 'http://127.0.0.1:' . $port . '/echo')
                     ->withHeader('Content-Type', 'text/plain')
                     ->withHeader('X-Custom', 'sent')
@@ -68,8 +68,8 @@ final class ClientTest extends TestCase
 
         try {
             Coroutine\run(function () use ($port): void {
-                $requestFactory = new RequestFactory();
-                $client = new Client(new ResponseFactory(), new StreamFactory());
+                $requestFactory = new Request\Factory();
+                $client = new Client(new Response\Factory(), new Stream\Factory());
 
                 $notFound = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/not-found'));
                 $serverError = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/server-error'));
@@ -96,8 +96,8 @@ final class ClientTest extends TestCase
 
         try {
             Coroutine\run(function () use ($port): void {
-                $requestFactory = new RequestFactory();
-                $client = new Client(new ResponseFactory(), new StreamFactory());
+                $requestFactory = new Request\Factory();
+                $client = new Client(new Response\Factory(), new Stream\Factory());
 
                 $headers = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/headers'));
                 $binary = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/binary'));
@@ -123,8 +123,8 @@ final class ClientTest extends TestCase
         $thrown = null;
 
         Coroutine\run(function () use ($port, &$thrown): void {
-            $requestFactory = new RequestFactory();
-            $client = new Client(new ResponseFactory(), new StreamFactory(), [
+            $requestFactory = new Request\Factory();
+            $client = new Client(new Response\Factory(), new Stream\Factory(), [
                 'connect_timeout' => 0.1,
                 'timeout' => 0.1,
             ]);

@@ -51,18 +51,18 @@ Source specs:
 
 ## Multipart Coverage
 
-- Multipart request builder creates stable per-part headers and terminal boundaries.
-- Multipart request builder supports scalar fields, file/body parts, filenames, content types, and custom per-part headers.
-- Multipart request builder emits CRLF-delimited part headers and bodies.
-- Multipart request builder escapes quoted `Content-Disposition` parameter values for field names and filenames.
-- Multipart request builder supports repeated field names by accepting multiple explicit parts with the same name.
-- Multipart response decoder parses quoted and unquoted boundaries.
-- Multipart response decoder treats only delimiter lines as multipart boundaries and does not split on boundary-like text inside part content.
-- Multipart response decoder ignores preamble and epilogue content.
-- Multipart response decoder preserves part ordering.
-- Multipart response decoder preserves repeated field names as separate ordered parts.
-- Multipart response decoder supports quoted and token `Content-Disposition` parameter values.
-- Multipart response decoder preserves duplicate per-part headers.
+- Multipart request factory creates stable per-part headers and terminal boundaries.
+- Multipart request factory supports scalar fields, file/body parts, filenames, content types, and custom per-part headers.
+- Multipart request factory emits CRLF-delimited part headers and bodies.
+- Multipart request factory escapes quoted `Content-Disposition` parameter values for field names and filenames.
+- Multipart request factory supports repeated field names by accepting multiple explicit parts with the same name.
+- Multipart response helpers parse quoted and unquoted boundaries.
+- Multipart response helpers treat only delimiter lines as multipart boundaries and do not split on boundary-like text inside part content.
+- Multipart response helpers ignore preamble and epilogue content.
+- Multipart response helpers preserve part ordering.
+- Multipart response helpers preserve repeated field names as separate ordered parts.
+- Multipart response helpers support quoted and token `Content-Disposition` parameter values.
+- Multipart response helpers preserve duplicate per-part headers.
 - Multipart response parts expose name, filename, content type, headers, and body.
-- Multipart response decoder rejects missing boundaries.
-- Multipart response decoder preserves CRLF-like bytes inside part bodies.
+- Multipart response helpers reject missing boundaries.
+- Multipart response helpers preserve CRLF-like bytes inside part bodies.

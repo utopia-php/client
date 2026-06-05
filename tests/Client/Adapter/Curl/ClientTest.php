@@ -9,16 +9,16 @@ use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\NetworkExceptionInterface;
 use ReflectionMethod;
 use Utopia\Client\Adapter\Curl\Client;
-use Utopia\Psr7\RequestFactory;
-use Utopia\Psr7\ResponseFactory;
-use Utopia\Psr7\StreamFactory;
+use Utopia\Psr7\Request;
+use Utopia\Psr7\Response;
+use Utopia\Psr7\Stream;
 
 final class ClientTest extends TestCase
 {
     public function testItRequiresAbsoluteUris(): void
     {
-        $requestFactory = new RequestFactory();
-        $client = new Client(new ResponseFactory(), new StreamFactory());
+        $requestFactory = new Request\Factory();
+        $client = new Client(new Response\Factory(), new Stream\Factory());
 
         $this->expectException(ClientExceptionInterface::class);
 
@@ -35,9 +35,9 @@ final class ClientTest extends TestCase
         $server = $this->startServer($port);
 
         try {
-            $requestFactory = new RequestFactory();
-            $streamFactory = new StreamFactory();
-            $client = new Client(new ResponseFactory(), $streamFactory);
+            $requestFactory = new Request\Factory();
+            $streamFactory = new Stream\Factory();
+            $client = new Client(new Response\Factory(), $streamFactory);
             $request = $requestFactory->createRequest('POST', 'http://127.0.0.1:' . $port . '/echo')
                 ->withHeader('Content-Type', 'text/plain')
                 ->withHeader('X-Custom', 'sent')
@@ -63,8 +63,8 @@ final class ClientTest extends TestCase
         $server = $this->startServer($port);
 
         try {
-            $requestFactory = new RequestFactory();
-            $client = new Client(new ResponseFactory(), new StreamFactory());
+            $requestFactory = new Request\Factory();
+            $client = new Client(new Response\Factory(), new Stream\Factory());
 
             $notFound = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/not-found'));
             $serverError = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/server-error'));
@@ -89,8 +89,8 @@ final class ClientTest extends TestCase
         $server = $this->startServer($port);
 
         try {
-            $requestFactory = new RequestFactory();
-            $client = new Client(new ResponseFactory(), new StreamFactory());
+            $requestFactory = new Request\Factory();
+            $client = new Client(new Response\Factory(), new Stream\Factory());
 
             $response = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/redirect'));
 
@@ -113,8 +113,8 @@ final class ClientTest extends TestCase
         $server = $this->startServer($port);
 
         try {
-            $requestFactory = new RequestFactory();
-            $client = new Client(new ResponseFactory(), new StreamFactory());
+            $requestFactory = new Request\Factory();
+            $client = new Client(new Response\Factory(), new Stream\Factory());
 
             $headers = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/headers'));
             $binary = $client->sendRequest($requestFactory->createRequest('GET', 'http://127.0.0.1:' . $port . '/binary'));
@@ -136,9 +136,9 @@ final class ClientTest extends TestCase
             self::markTestSkipped('The curl extension is not installed.');
         }
 
-        $requestFactory = new RequestFactory();
+        $requestFactory = new Request\Factory();
         $port = $this->availablePort();
-        $client = new Client(new ResponseFactory(), new StreamFactory(), [
+        $client = new Client(new Response\Factory(), new Stream\Factory(), [
             \CURLOPT_CONNECTTIMEOUT_MS => 100,
             \CURLOPT_TIMEOUT_MS => 100,
         ]);
@@ -150,7 +150,7 @@ final class ClientTest extends TestCase
 
     public function testItParsesTheFinalCurlHeaderBlock(): void
     {
-        $client = new Client(new ResponseFactory(), new StreamFactory());
+        $client = new Client(new Response\Factory(), new Stream\Factory());
         $method = new ReflectionMethod($client, 'parseHeaderBlock');
 
         $parsed = $method->invoke($client, "HTTP/1.1 100 Continue\r\n\r\nHTTP/1.1 200\r\nX-Trace: one\r\nX-Trace: two\r\n\r\n");

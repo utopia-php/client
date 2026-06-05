@@ -14,6 +14,8 @@ use Utopia\Client\Adapter;
 use Utopia\Client\Exception\NetworkException;
 use Utopia\Client\Exception\RequestException;
 use Utopia\Client\Response\Builder as ResponseBuilder;
+use Utopia\Psr7\Response;
+use Utopia\Psr7\Stream;
 use ValueError;
 
 class Client implements Adapter
@@ -26,8 +28,8 @@ class Client implements Adapter
      * @param array<int, mixed> $options
      */
     public function __construct(
-        ResponseFactoryInterface $responseFactory,
-        StreamFactoryInterface $streamFactory,
+        ResponseFactoryInterface $responseFactory = new Response\Factory(),
+        StreamFactoryInterface $streamFactory = new Stream\Factory(),
         private array $options = [],
     ) {
         $this->responseBuilder = new ResponseBuilder($responseFactory, $streamFactory);

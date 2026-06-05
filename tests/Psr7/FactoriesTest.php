@@ -9,19 +9,19 @@ use Psr\Http\Message\RequestFactoryInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Message\UriFactoryInterface;
-use Utopia\Psr7\RequestFactory;
-use Utopia\Psr7\ResponseFactory;
-use Utopia\Psr7\StreamFactory;
-use Utopia\Psr7\UriFactory;
+use Utopia\Psr7\Request;
+use Utopia\Psr7\Response;
+use Utopia\Psr7\Stream;
+use Utopia\Psr7\Uri;
 
 final class FactoriesTest extends TestCase
 {
     public function testItCreatesPsrMessages(): void
     {
-        $uriFactory = new UriFactory();
-        $requestFactory = new RequestFactory($uriFactory);
-        $responseFactory = new ResponseFactory();
-        $streamFactory = new StreamFactory();
+        $uriFactory = new Uri\Factory();
+        $requestFactory = new Request\Factory($uriFactory);
+        $responseFactory = new Response\Factory();
+        $streamFactory = new Stream\Factory();
 
         $this->assertInstanceOf(UriFactoryInterface::class, $uriFactory);
         $this->assertInstanceOf(RequestFactoryInterface::class, $requestFactory);

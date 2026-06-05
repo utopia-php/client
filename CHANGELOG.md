@@ -13,8 +13,8 @@ This project follows semantic versioning.
 - cURL adapter for regular PHP runtimes.
 - Swoole coroutine adapter for coroutine runtimes.
 - PSR-7 message implementations and PSR-17 factories under `Utopia\Psr7`.
-- Request builders for JSON, form-encoded, query-string, raw-body, and multipart requests.
-- Response decoders for JSON, form-encoded, and multipart responses.
+- Request factories for JSON, form-encoded, query-string, raw-body, and multipart requests.
+- Direct response helpers for JSON, form-encoded, and multipart response decoding.
 - Immutable timeout helpers for total and connection timeouts.
 - PHP 8.4+ tooling with Pint, PHPStan level 10, Rector, PHPUnit, Composer audit, and GitHub Actions CI.
 - Local PSR/RFC spec copies and translated testing requirements.

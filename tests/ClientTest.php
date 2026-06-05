@@ -11,15 +11,15 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Utopia\Client;
 use Utopia\Client\Adapter;
-use Utopia\Psr7\RequestFactory;
-use Utopia\Psr7\ResponseFactory;
+use Utopia\Psr7\Request;
+use Utopia\Psr7\Response;
 use ValueError;
 
 final class ClientTest extends TestCase
 {
     public function testItDecoratesConfigurableAdapters(): void
     {
-        $request = new RequestFactory()->createRequest('GET', 'https://example.com');
+        $request = new Request\Factory()->createRequest('GET', 'https://example.com');
         $adapter = new RecordingAdapter();
         $client = new Client($adapter);
         $configured = $client
@@ -44,7 +44,7 @@ final class ClientTest extends TestCase
 
     public function testItAppliesDefaultHeadersImmutablyWithoutOverridingRequestHeaders(): void
     {
-        $requestFactory = new RequestFactory();
+        $requestFactory = new Request\Factory();
         $client = new Client(new RecordingAdapter());
         $configured = $client->withHeaders([
             'Accept' => 'application/json',
@@ -66,7 +66,7 @@ final class ClientTest extends TestCase
 
     public function testItAppliesAuthDefaultsWithoutOverridingRequestAuthorization(): void
     {
-        $requestFactory = new RequestFactory();
+        $requestFactory = new Request\Factory();
         $client = new Client(new RecordingAdapter());
 
         $basic = $client
@@ -89,7 +89,7 @@ final class ClientTest extends TestCase
 
     public function testItAppliesBaseUriToRelativeRequests(): void
     {
-        $requestFactory = new RequestFactory();
+        $requestFactory = new Request\Factory();
         $client = new Client(new RecordingAdapter())
             ->withBaseUri('https://api.example.com/v1');
 
@@ -155,7 +155,7 @@ final class RecordingAdapter implements Adapter
      */
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
-        $response = new ResponseFactory()
+        $response = new Response\Factory()
             ->createResponse()
             ->withHeader('X-Request-Uri', (string) $request->getUri())
             ->withHeader('X-Request-Host', $request->getHeaderLine('Host'))
