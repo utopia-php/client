@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Utopia\Tests;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\RequestInterface;
@@ -39,6 +40,82 @@ final class ClientTest extends TestCase
         $this->expectException(ValueError::class);
 
         $client->withTimeout(-1);
+    }
+
+    public function testItAppliesDefaultHeadersImmutablyWithoutOverridingRequestHeaders(): void
+    {
+        $requestFactory = new RequestFactory();
+        $client = new Client(new RecordingAdapter());
+        $configured = $client->withHeaders([
+            'Accept' => 'application/json',
+            'X-Trace' => ['one', 'two'],
+        ]);
+
+        $plain = $client->sendRequest(
+            $requestFactory->createRequest('GET', 'https://example.com'),
+        );
+        $response = $configured->sendRequest(
+            $requestFactory->createRequest('GET', 'https://example.com')
+                ->withHeader('Accept', 'application/xml'),
+        );
+
+        $this->assertSame('', $plain->getHeaderLine('X-Request-Accept'));
+        $this->assertSame('application/xml', $response->getHeaderLine('X-Request-Accept'));
+        $this->assertSame('one, two', $response->getHeaderLine('X-Request-Trace'));
+    }
+
+    public function testItAppliesAuthDefaultsWithoutOverridingRequestAuthorization(): void
+    {
+        $requestFactory = new RequestFactory();
+        $client = new Client(new RecordingAdapter());
+
+        $basic = $client
+            ->withBasicAuth('ada', 'secret')
+            ->sendRequest($requestFactory->createRequest('GET', 'https://example.com'));
+        $bearer = $client
+            ->withBearerAuth('token')
+            ->sendRequest($requestFactory->createRequest('GET', 'https://example.com'));
+        $override = $client
+            ->withBearerAuth('token')
+            ->sendRequest(
+                $requestFactory->createRequest('GET', 'https://example.com')
+                    ->withHeader('Authorization', 'Digest custom'),
+            );
+
+        $this->assertSame('Basic YWRhOnNlY3JldA==', $basic->getHeaderLine('X-Request-Authorization'));
+        $this->assertSame('Bearer token', $bearer->getHeaderLine('X-Request-Authorization'));
+        $this->assertSame('Digest custom', $override->getHeaderLine('X-Request-Authorization'));
+    }
+
+    public function testItAppliesBaseUriToRelativeRequests(): void
+    {
+        $requestFactory = new RequestFactory();
+        $client = new Client(new RecordingAdapter())
+            ->withBaseUri('https://api.example.com/v1');
+
+        $relative = $client->sendRequest(
+            $requestFactory->createRequest('GET', 'users?active=1'),
+        );
+        $absolutePath = $client->sendRequest(
+            $requestFactory->createRequest('GET', '/status'),
+        );
+        $absoluteUri = $client->sendRequest(
+            $requestFactory->createRequest('GET', 'https://other.example.com/users'),
+        );
+
+        $this->assertSame('https://api.example.com/v1/users?active=1', $relative->getHeaderLine('X-Request-Uri'));
+        $this->assertSame('api.example.com', $relative->getHeaderLine('X-Request-Host'));
+        $this->assertSame('https://api.example.com/status', $absolutePath->getHeaderLine('X-Request-Uri'));
+        $this->assertSame('https://other.example.com/users', $absoluteUri->getHeaderLine('X-Request-Uri'));
+    }
+
+    public function testItRejectsRelativeBaseUris(): void
+    {
+        $client = new Client(new RecordingAdapter());
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $client->withBaseUri('/api');
     }
 }
 
@@ -78,9 +155,13 @@ final class RecordingAdapter implements Adapter
      */
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
-        unset($request);
-
-        $response = new ResponseFactory()->createResponse();
+        $response = new ResponseFactory()
+            ->createResponse()
+            ->withHeader('X-Request-Uri', (string) $request->getUri())
+            ->withHeader('X-Request-Host', $request->getHeaderLine('Host'))
+            ->withHeader('X-Request-Accept', $request->getHeaderLine('Accept'))
+            ->withHeader('X-Request-Authorization', $request->getHeaderLine('Authorization'))
+            ->withHeader('X-Request-Trace', $request->getHeaderLine('X-Trace'));
 
         if ($this->timeout !== null) {
             $response = $response->withHeader('X-Timeout', (string) $this->timeout);

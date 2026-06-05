@@ -4,7 +4,7 @@ A small PSR-18 HTTP client for PHP 8.4+.
 
 It provides:
 
-- `Utopia\Client`, a PSR-18 client wrapper with immutable timeout helpers.
+- `Utopia\Client`, a PSR-18 client wrapper with immutable headers, auth, base URI, and timeout helpers.
 - `Utopia\Client\Adapter\Curl\Client`, a cURL transport for regular PHP runtimes.
 - `Utopia\Client\Adapter\SwooleCoroutine\Client`, a Swoole coroutine transport.
 - `Utopia\Psr7\*` PSR-7 messages and PSR-17 factories.
@@ -40,10 +40,14 @@ $streamFactory = new StreamFactory();
 
 $client = new Client(
     new CurlAdapter($responseFactory, $streamFactory),
-);
+)
+    ->withBaseUri('https://api.example.com/v1')
+    ->withHeaders([
+        'Accept' => 'application/json',
+    ]);
 
 $response = $client->sendRequest(
-    $requestFactory->createRequest('GET', 'https://example.com'),
+    $requestFactory->createRequest('GET', 'users'),
 );
 
 echo $response->getStatusCode();
@@ -51,6 +55,43 @@ echo $response->getBody();
 ```
 
 `Utopia\Client` implements `Psr\Http\Client\ClientInterface`, so it can be passed anywhere a PSR-18 client is expected.
+
+## Client Defaults
+
+Client defaults are immutable. Each `with*()` method returns a configured clone.
+
+```php
+<?php
+
+$client = $client
+    ->withBaseUri('https://api.example.com/v1')
+    ->withHeaders([
+        'Accept' => 'application/json',
+        'User-Agent' => 'Acme API Client',
+    ])
+    ->withBearerAuth('token');
+```
+
+Configured headers are defaults. If a request already has the same header, the request header is preserved.
+
+```php
+<?php
+
+$request = $requestFactory
+    ->createRequest('GET', 'users')
+    ->withHeader('Accept', 'application/xml');
+```
+
+Authentication helpers set the default `Authorization` header:
+
+```php
+<?php
+
+$client = $client->withBasicAuth('username', 'password');
+$client = $client->withBearerAuth('token');
+```
+
+`withBaseUri()` resolves relative request URIs before sending. Absolute request URIs are left unchanged.
 
 ## Request Builder
 
@@ -219,6 +260,7 @@ The repository includes local copies of the relevant PSR and multipart RFC docum
 
 ```bash
 composer install
+composer audit
 composer format:check
 composer refactor:check
 composer analyze
