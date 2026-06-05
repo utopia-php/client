@@ -32,22 +32,19 @@ use Utopia\Psr7\Request;
 
 require __DIR__ . '/vendor/autoload.php';
 
+$client = new Client(new CurlAdapter());
 $requestFactory = new Request\Factory();
 
-$client = new Client(
-    new CurlAdapter(),
-)
-    ->withBaseUri('https://api.example.com/v1')
-    ->withHeaders([
-        'Accept' => 'application/json',
-    ]);
+$request = $requestFactory->json('POST', 'https://example.com/users', [
+    'name' => 'Ada',
+]);
 
 $response = $client->sendRequest(
-    $requestFactory->createRequest('GET', 'users'),
+    $request,
 );
 
 echo $response->getStatusCode();
-echo $response->getBody();
+echo $response->json()['name'];
 ```
 
 `Utopia\Client` implements `Psr\Http\Client\ClientInterface`, so it can be passed anywhere a PSR-18 client is expected.
@@ -209,7 +206,9 @@ Coroutine\run(static function (): void {
     );
 
     $response = $client->sendRequest(
-        $requestFactory->createRequest('GET', 'https://example.com'),
+        $requestFactory->query('GET', 'https://example.com', [
+            'ping' => '1',
+        ]),
     );
 
     echo $response->getStatusCode();
