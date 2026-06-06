@@ -9,8 +9,8 @@ It provides:
 - `Utopia\Client\Adapter\SwooleCoroutine\Client`, a Swoole coroutine transport.
 - `streamRequest()`, which delivers the response body to a sink callback chunk-by-chunk so large downloads and event streams are consumed with bounded memory (see [Streaming Responses](#streaming-responses)).
 - `Utopia\Psr7\*` PSR-7 messages and PSR-17 factories.
-- Request factories for JSON, forms, query strings, raw bodies, and multipart uploads.
-- Response decoders for JSON, form-encoded, and multipart payloads.
+- Request factories for JSON, XML, text, forms, query strings, raw bodies, and multipart uploads.
+- Response decoders for JSON, XML, text, form-encoded, and multipart payloads.
 
 HTTP/1.1 is preferred by default. Redirects are disabled by default so PSR-18 callers receive the response returned by the server.
 
@@ -115,6 +115,10 @@ $form = $requestFactory->form(Method::POST, 'https://api.example.com/sessions', 
     'password' => 'secret',
 ]);
 
+$xml = $requestFactory->xml(Method::POST, 'https://api.example.com/users', '<user><name>Ada</name></user>');
+
+$text = $requestFactory->text(Method::POST, 'https://api.example.com/notes', 'Hello, Ada');
+
 $query = $requestFactory->query(Method::GET, 'https://api.example.com/users?active=1', [
     'page' => 2,
     'search' => 'Ada Lovelace',
@@ -148,7 +152,10 @@ $request = $requestFactory->json(Method::PATCH, 'https://api.example.com/users/1
 ```php
 <?php
 
+$type = $response->contentType(); // media type without parameters, e.g. "application/json"
 $data = $response->json();
+$xml = $response->xml();
+$text = $response->text();
 $form = $response->form();
 $parts = $response->multipart();
 

@@ -66,6 +66,22 @@ final readonly class Factory implements RequestFactoryInterface
     /**
      * @param array<string, string|array<int, string>> $headers
      */
+    public function text(string $method, UriInterface|string $uri, string $text, array $headers = []): RequestInterface
+    {
+        return $this->body($method, $uri, $text, ContentType::PLAIN_TEXT, $headers);
+    }
+
+    /**
+     * @param array<string, string|array<int, string>> $headers
+     */
+    public function xml(string $method, UriInterface|string $uri, string $xml, array $headers = []): RequestInterface
+    {
+        return $this->body($method, $uri, $xml, ContentType::XML, $headers);
+    }
+
+    /**
+     * @param array<string, string|array<int, string>> $headers
+     */
     public function body(string $method, UriInterface|string $uri, string $body, string $contentType, array $headers = []): RequestInterface
     {
         $request = $this->applyHeaders(

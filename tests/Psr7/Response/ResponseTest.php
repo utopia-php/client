@@ -21,6 +21,56 @@ final class ResponseTest extends TestCase
         $this->assertSame(['name' => 'Ada'], $response->json());
     }
 
+    public function testItReadsTheContentTypeWithoutParameters(): void
+    {
+        $response = new Response\Factory()
+            ->createResponse()
+            ->withHeader('Content-Type', 'Application/JSON; charset=utf-8');
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertSame('application/json', $response->contentType());
+    }
+
+    public function testItReadsAnEmptyContentTypeWhenAbsent(): void
+    {
+        $response = new Response\Factory()->createResponse();
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertSame('', $response->contentType());
+    }
+
+    public function testItReadsTextResponses(): void
+    {
+        $response = new Response\Factory()
+            ->createResponse()
+            ->withBody(new Stream\Factory()->createStream('Hello, Ada'));
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertSame('Hello, Ada', $response->text());
+    }
+
+    public function testItDecodesXmlResponses(): void
+    {
+        $response = new Response\Factory()
+            ->createResponse()
+            ->withBody(new Stream\Factory()->createStream('<user><name>Ada</name></user>'));
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertSame('Ada', (string) $response->xml()->name);
+    }
+
+    public function testItRejectsInvalidXmlResponses(): void
+    {
+        $response = new Response\Factory()
+            ->createResponse()
+            ->withBody(new Stream\Factory()->createStream('<user><name>Ada</name>'));
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->expectException(InvalidArgumentException::class);
+
+        $response->xml();
+    }
+
     public function testItDecodesFormResponses(): void
     {
         $response = new Response\Factory()

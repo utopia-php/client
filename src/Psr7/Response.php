@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use JsonException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
+use SimpleXMLElement;
 use Utopia\Psr7\Response\Multipart\Part;
 use ValueError;
 
@@ -44,6 +45,18 @@ final class Response extends Message implements ResponseInterface
         return $this->reasonPhrase;
     }
 
+    public function contentType(): string
+    {
+        $contentType = $this->getHeaderLine(Header::CONTENT_TYPE);
+        $position = strpos($contentType, ';');
+
+        if ($position !== false) {
+            $contentType = substr($contentType, 0, $position);
+        }
+
+        return strtolower(trim($contentType));
+    }
+
     /**
      * @throws JsonException
      */
@@ -54,6 +67,28 @@ final class Response extends Message implements ResponseInterface
         }
 
         return json_decode((string) $this->getBody(), $associative, $depth, $flags | JSON_THROW_ON_ERROR);
+    }
+
+    public function text(): string
+    {
+        return (string) $this->getBody();
+    }
+
+    public function xml(int $options = 0): SimpleXMLElement
+    {
+        $previous = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+
+        $xml = simplexml_load_string((string) $this->getBody(), SimpleXMLElement::class, $options);
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if ($xml === false) {
+            throw new InvalidArgumentException('Invalid XML response.');
+        }
+
+        return $xml;
     }
 
     /**

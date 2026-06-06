@@ -64,6 +64,26 @@ final class FactoryTest extends TestCase
         $this->assertSame('raw-bytes', (string) $request->getBody());
     }
 
+    public function testItCreatesTextRequests(): void
+    {
+        $requestFactory = new Request\Factory();
+
+        $request = $requestFactory->text('POST', 'https://example.com/notes', 'Hello, Ada');
+
+        $this->assertSame('text/plain', $request->getHeaderLine('Content-Type'));
+        $this->assertSame('Hello, Ada', (string) $request->getBody());
+    }
+
+    public function testItCreatesXmlRequests(): void
+    {
+        $requestFactory = new Request\Factory();
+
+        $request = $requestFactory->xml('POST', 'https://example.com/users', '<user><name>Ada</name></user>');
+
+        $this->assertSame('application/xml', $request->getHeaderLine('Content-Type'));
+        $this->assertSame('<user><name>Ada</name></user>', (string) $request->getBody());
+    }
+
     public function testItCreatesQueryRequests(): void
     {
         $requestFactory = new Request\Factory();
