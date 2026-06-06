@@ -13,7 +13,8 @@ final readonly class Part
      */
     private function __construct(
         private string $name,
-        private string $body,
+        private string $content,
+        private ?string $path,
         private ?string $filename = null,
         private ?string $contentType = null,
         private array $headers = [],
@@ -24,27 +25,22 @@ final readonly class Part
      */
     public static function field(string $name, string $value, array $headers = []): self
     {
-        return new self($name, $value, headers: $headers);
+        return new self($name, $value, null, headers: $headers);
     }
 
     /**
+     * Reference a file on disk. The file is read lazily while the request is sent,
+     * so the body never has to be held in memory.
+     *
      * @param array<string, string> $headers
      */
     public static function file(string $name, string $path, ?string $filename = null, ?string $contentType = null, array $headers = []): self
     {
-        $body = file_get_contents($path);
-
-        if ($body === false) {
+        if (!is_file($path)) {
             throw new RuntimeException('Unable to read multipart file.');
         }
 
-        return new self(
-            $name,
-            $body,
-            $filename ?? basename($path),
-            $contentType,
-            $headers,
-        );
+        return new self($name, '', $path, $filename ?? basename($path), $contentType, $headers);
     }
 
     /**
@@ -52,7 +48,7 @@ final readonly class Part
      */
     public static function body(string $name, string $body, ?string $filename = null, ?string $contentType = null, array $headers = []): self
     {
-        return new self($name, $body, $filename, $contentType, $headers);
+        return new self($name, $body, null, $filename, $contentType, $headers);
     }
 
     public function name(): string
@@ -60,9 +56,29 @@ final readonly class Part
         return $this->name;
     }
 
-    public function bodyContent(): string
+    /**
+     * In-memory content for field and body parts; empty for file parts, whose
+     * bytes live at {@see path()}.
+     */
+    public function content(): string
     {
-        return $this->body;
+        return $this->content;
+    }
+
+    public function path(): ?string
+    {
+        return $this->path;
+    }
+
+    public function size(): int
+    {
+        if ($this->path === null) {
+            return \strlen($this->content);
+        }
+
+        $size = filesize($this->path);
+
+        return $size === false ? 0 : $size;
     }
 
     public function filename(): ?string

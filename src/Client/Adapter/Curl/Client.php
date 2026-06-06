@@ -245,10 +245,27 @@ class Client implements Adapter
             },
         ];
 
-        $requestBody = (string) $request->getBody();
+        $body = $request->getBody();
+        $size = $body->getSize();
 
-        if ($requestBody !== '') {
-            $options[\CURLOPT_POSTFIELDS] = $requestBody;
+        // Stream the body through a read callback so it is never fully held in
+        // memory. cURL pulls it in chunks; we hand it the size when known so the
+        // request carries Content-Length, and fall back to chunked otherwise.
+        if ($size !== 0) {
+            if ($body->isSeekable()) {
+                $body->rewind();
+            }
+
+            $options[\CURLOPT_UPLOAD] = true;
+            $options[\CURLOPT_READFUNCTION] = static function (CurlHandle $handle, mixed $resource, int $length) use ($body): string {
+                unset($handle, $resource);
+
+                return $body->eof() ? '' : $body->read($length);
+            };
+
+            if ($size !== null) {
+                $options[\CURLOPT_INFILESIZE] = $size;
+            }
         }
 
         return $this->options + $options;

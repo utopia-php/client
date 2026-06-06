@@ -23,6 +23,7 @@ use Utopia\Psr7\ContentType;
 use Utopia\Psr7\Header;
 use Utopia\Psr7\Method;
 use Utopia\Psr7\Request;
+use Utopia\Psr7\Request\Multipart\Part;
 use Utopia\Psr7\Stream;
 use Utopia\Tests\Server\Http;
 use ValueError;
@@ -398,6 +399,29 @@ abstract class AdapterContract extends TestCase
         });
     }
 
+    public function testItUploadsMultipartFilesAndFields(): void
+    {
+        Http::serve(function (int $port): void {
+            $contents = str_repeat('payload', 4096);
+            $path = $this->writeTempFile($contents);
+
+            try {
+                $request = new Request\Factory()->multipart(Method::POST, 'http://127.0.0.1:' . $port . '/multipart', [
+                    'name' => 'Ada',
+                    'file' => Part::file('file', $path, 'data.bin', ContentType::OCTET_STREAM),
+                ]);
+                $client = $this->createAdapter();
+
+                $response = $this->send($client, $request);
+
+                $this->assertSame(200, $response->getStatusCode());
+                $this->assertSame('Ada:' . \strlen($contents) . ':' . hash('sha256', $contents), (string) $response->getBody());
+            } finally {
+                unlink($path);
+            }
+        });
+    }
+
     public function testTimeoutHelpersReturnConfiguredClones(): void
     {
         $client = $this->createAdapter();
@@ -636,6 +660,48 @@ abstract class AdapterContract extends TestCase
             $this->assertSame(hash('sha256', str_repeat('a', $expected)), hash_final($hash));
             $this->assertLessThan(2 * 1_048_576, $peak, 'Streaming must not buffer the whole body.');
         });
+    }
+
+    protected function writeTempFile(string $contents): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'utopia-upload-');
+
+        if ($path === false) {
+            self::fail('Unable to create a temporary upload file.');
+        }
+
+        file_put_contents($path, $contents);
+
+        return $path;
+    }
+
+    /**
+     * Write a file of $size bytes without holding it in memory, so it can be
+     * uploaded to prove streaming keeps memory bounded.
+     */
+    protected function writeLargeTempFile(int $size): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'utopia-upload-');
+
+        if ($path === false) {
+            self::fail('Unable to create a temporary upload file.');
+        }
+
+        $handle = fopen($path, 'wb');
+
+        if (!\is_resource($handle)) {
+            self::fail('Unable to open the temporary upload file.');
+        }
+
+        $chunk = str_repeat('a', 65_536);
+
+        for ($written = 0; $written < $size; $written += \strlen($chunk)) {
+            fwrite($handle, $chunk);
+        }
+
+        fclose($handle);
+
+        return $path;
     }
 
     private function send(Adapter $client, RequestInterface $request): ResponseInterface

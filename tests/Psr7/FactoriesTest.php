@@ -46,4 +46,33 @@ final class FactoriesTest extends TestCase
         $this->assertSame('application/json', $response->getHeaderLine('Content-Type'));
         $this->assertSame('{}', (string) $response->getBody());
     }
+
+    public function testItWrapsFilesAndResourcesWithoutCopyingThem(): void
+    {
+        $streamFactory = new Stream\Factory();
+        $path = tempnam(sys_get_temp_dir(), 'utopia-stream-');
+        $this->assertNotFalse($path);
+        file_put_contents($path, 'on disk');
+
+        try {
+            $fromFile = $streamFactory->createStreamFromFile($path);
+            $this->assertSame(7, $fromFile->getSize());
+            $this->assertSame('on disk', (string) $fromFile);
+
+            $resource = fopen('php://temp', 'r+');
+            $this->assertIsResource($resource);
+            fwrite($resource, 'in memory');
+            $fromResource = $streamFactory->createStreamFromResource($resource);
+            $this->assertSame('in memory', (string) $fromResource);
+        } finally {
+            unlink($path);
+        }
+    }
+
+    public function testItRejectsFilesThatCannotBeOpened(): void
+    {
+        $this->expectException(\RuntimeException::class);
+
+        new Stream\Factory()->createStreamFromFile('/nonexistent/utopia-missing-file');
+    }
 }

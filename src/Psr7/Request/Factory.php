@@ -13,6 +13,7 @@ use Psr\Http\Message\UriInterface;
 use Utopia\Psr7\ContentType;
 use Utopia\Psr7\Header;
 use Utopia\Psr7\Request;
+use Utopia\Psr7\Request\Multipart\Body;
 use Utopia\Psr7\Request\Multipart\Part;
 use Utopia\Psr7\Stream;
 use Utopia\Psr7\Uri;
@@ -131,7 +132,7 @@ final readonly class Factory implements RequestFactoryInterface
         $request = $this->applyHeaders(
             $this->createRequest($method, $uri),
             $headers,
-        )->withBody($this->streamFactory->createStream($this->multipartBody($boundary, $parts)));
+        )->withBody(new Body($boundary, $this->parts($parts)));
 
         if (!$request->hasHeader(Header::CONTENT_TYPE)) {
             return $request->withHeader(Header::CONTENT_TYPE, ContentType::MULTIPART_FORM_DATA . '; boundary=' . $boundary);
@@ -159,51 +160,17 @@ final readonly class Factory implements RequestFactoryInterface
 
     /**
      * @param array<array-key, scalar|Part> $parts
+     *
+     * @return list<Part>
      */
-    private function multipartBody(string $boundary, array $parts): string
+    private function parts(array $parts): array
     {
-        $body = '';
+        $normalized = [];
 
         foreach ($parts as $name => $part) {
-            $part = $part instanceof Part ? $part : Part::field((string) $name, (string) $part);
-            $body .= '--' . $boundary . "\r\n";
-            $body .= $this->multipartHeaders($part);
-            $body .= "\r\n";
-            $body .= $part->bodyContent() . "\r\n";
+            $normalized[] = $part instanceof Part ? $part : Part::field((string) $name, (string) $part);
         }
 
-        return $body . '--' . $boundary . "--\r\n";
-    }
-
-    private function multipartHeaders(Part $part): string
-    {
-        $headers = [
-            Header::CONTENT_DISPOSITION => 'form-data; name="' . $this->escapeQuotedString($part->name()) . '"',
-        ];
-
-        if ($part->filename() !== null) {
-            $headers[Header::CONTENT_DISPOSITION] .= '; filename="' . $this->escapeQuotedString($part->filename()) . '"';
-        }
-
-        if ($part->contentType() !== null) {
-            $headers[Header::CONTENT_TYPE] = $part->contentType();
-        }
-
-        foreach ($part->headers() as $name => $value) {
-            $headers[$name] = $value;
-        }
-
-        $lines = [];
-
-        foreach ($headers as $name => $value) {
-            $lines[] = $name . ': ' . $value;
-        }
-
-        return implode("\r\n", $lines) . "\r\n";
-    }
-
-    private function escapeQuotedString(string $value): string
-    {
-        return addcslashes($value, '\\"');
+        return $normalized;
     }
 }

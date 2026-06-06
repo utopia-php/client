@@ -4,14 +4,80 @@ declare(strict_types=1);
 
 namespace Utopia\Tests\Client\Adapter\Curl;
 
+use Psr\Http\Message\RequestInterface;
 use Utopia\Client\Adapter;
 use Utopia\Client\Adapter\Curl\Client;
+use Utopia\Psr7\ContentType;
+use Utopia\Psr7\Method;
+use Utopia\Psr7\Request;
+use Utopia\Psr7\Request\Multipart\Part;
 use Utopia\Psr7\Response;
 use Utopia\Psr7\Stream;
 use Utopia\Tests\Client\Adapter\AdapterContract;
+use Utopia\Tests\Server\Http;
 
 final class ClientTest extends AdapterContract
 {
+    public function testItStreamsLargeRequestBodiesWithBoundedMemory(): void
+    {
+        $size = 8 * 1024 * 1024;
+        $path = $this->writeLargeTempFile($size);
+
+        try {
+            Http::serve(function (int $port) use ($path, $size): void {
+                $expected = $size . ':' . hash_file('sha256', $path);
+                $request = new Request\Factory()
+                    ->createRequest(Method::POST, 'http://127.0.0.1:' . $port . '/body-info')
+                    ->withBody(new Stream\Factory()->createStreamFromFile($path));
+
+                $peak = $this->peakWhileSending($request);
+
+                $this->assertSame($expected, $peak['body']);
+                $this->assertLessThan(2 * 1_048_576, $peak['peak'], 'Uploading must not buffer the whole body.');
+            });
+        } finally {
+            unlink($path);
+        }
+    }
+
+    public function testItStreamsLargeMultipartUploadsWithBoundedMemory(): void
+    {
+        $size = 8 * 1024 * 1024;
+        $path = $this->writeLargeTempFile($size);
+
+        try {
+            Http::serve(function (int $port) use ($path, $size): void {
+                $request = new Request\Factory()->multipart(Method::POST, 'http://127.0.0.1:' . $port . '/multipart', [
+                    'name' => 'Ada',
+                    'file' => Part::file('file', $path, 'data.bin', ContentType::OCTET_STREAM),
+                ]);
+
+                $peak = $this->peakWhileSending($request);
+
+                $this->assertSame('Ada:' . $size . ':' . hash_file('sha256', $path), $peak['body']);
+                $this->assertLessThan(2 * 1_048_576, $peak['peak'], 'Multipart uploads must not buffer the whole file.');
+            });
+        } finally {
+            unlink($path);
+        }
+    }
+
+    /**
+     * @return array{body: string, peak: int}
+     */
+    private function peakWhileSending(RequestInterface $request): array
+    {
+        $baseline = memory_get_usage();
+        memory_reset_peak_usage();
+
+        $response = $this->createAdapter()->sendRequest($request);
+
+        return [
+            'body' => (string) $response->getBody(),
+            'peak' => memory_get_peak_usage() - $baseline,
+        ];
+    }
+
     /**
      * @param array<int, mixed> $transportOptions
      */

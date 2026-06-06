@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Utopia\Psr7;
 
+use InvalidArgumentException;
 use Psr\Http\Message\StreamInterface;
 use RuntimeException;
 
@@ -23,6 +24,25 @@ final class Stream implements StreamInterface
         $this->resource = $resource;
         $this->write($content);
         $this->rewind();
+    }
+
+    /**
+     * Wrap an existing stream resource without reading it into memory, so a
+     * large payload such as an open file stays on disk while it is sent.
+     *
+     * @param resource $resource
+     */
+    public static function fromResource(mixed $resource): self
+    {
+        if (!\is_resource($resource)) {
+            throw new InvalidArgumentException('Expected a valid stream resource.');
+        }
+
+        $stream = new self();
+        fclose($stream->detach());
+        $stream->resource = $resource;
+
+        return $stream;
     }
 
     public function __toString(): string

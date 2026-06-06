@@ -114,6 +114,23 @@ if ($path === '/body-info') {
     return;
 }
 
+if ($path === '/multipart') {
+    $name = $_POST['name'] ?? '';
+    $name = is_string($name) ? $name : '';
+
+    $file = $_FILES['file'] ?? null;
+    $size = is_array($file) && isset($file['size']) && is_int($file['size']) ? $file['size'] : 0;
+    $tmp = is_array($file) && isset($file['tmp_name']) && is_string($file['tmp_name']) ? $file['tmp_name'] : '';
+    $hash = $tmp !== '' && is_file($tmp) ? hash_file('sha256', $tmp) : '';
+
+    http_response_code(200);
+    header('Content-Type: text/plain;charset=UTF-8');
+
+    echo $name . ':' . $size . ':' . $hash;
+
+    return;
+}
+
 if ($path === '/selected-headers') {
     $comma = $_SERVER['HTTP_X_COMMA'] ?? '';
     $comma = is_string($comma) ? $comma : '';

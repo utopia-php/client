@@ -27,6 +27,7 @@ use Utopia\Client\Exception\TimeoutException;
 use Utopia\Client\Exception\TlsException;
 use Utopia\Client\Response\Builder as ResponseBuilder;
 use Utopia\Client\Tls;
+use Utopia\Psr7\Request\Multipart\Body;
 use Utopia\Psr7\Response;
 use Utopia\Psr7\Stream;
 use ValueError;
@@ -205,14 +206,29 @@ class Client implements Adapter
                 throw new InvalidArgumentException('Unable to configure Swoole request method.');
             }
 
-            if ($client->setHeaders($this->requestHeaders($request)) === false) {
+            $body = $request->getBody();
+            $multipart = $body instanceof Body && $this->streamableMultipart($body) ? $body : null;
+
+            $headers = $this->requestHeaders($request);
+
+            // Swoole generates its own multipart Content-Type (with its own
+            // boundary) when files are attached, so drop ours to avoid a clash.
+            if ($multipart instanceof \Utopia\Psr7\Request\Multipart\Body) {
+                $headers = $this->withoutContentType($headers);
+            }
+
+            if ($client->setHeaders($headers) === false) {
                 throw new InvalidArgumentException('Unable to configure Swoole request headers.');
             }
 
-            $body = (string) $request->getBody();
+            if ($multipart instanceof \Utopia\Psr7\Request\Multipart\Body) {
+                $this->attachMultipart($client, $multipart);
+            } else {
+                $data = (string) $body;
 
-            if ($body !== '' && $client->setData($body) === false) {
-                throw new InvalidArgumentException('Unable to configure Swoole request body.');
+                if ($data !== '' && $client->setData($data) === false) {
+                    throw new InvalidArgumentException('Unable to configure Swoole request body.');
+                }
             }
         } catch (InvalidArgumentException $invalidArgumentException) {
             $client->close();
@@ -488,6 +504,94 @@ class Client implements Adapter
         }
 
         return $statusCode === $fallback;
+    }
+
+    /**
+     * Whether a multipart body can be sent through Swoole's native upload API,
+     * which streams files from disk with sendfile(). It only models simple
+     * uploads: at least one file or data part, no custom per-part headers, no
+     * repeated field names, and no empty files (Swoole rejects those). Anything
+     * else falls back to buffering the serialised body.
+     */
+    private function streamableMultipart(Body $body): bool
+    {
+        $hasUpload = false;
+        $fields = [];
+
+        foreach ($body->parts() as $part) {
+            if ($part->headers() !== []) {
+                return false;
+            }
+
+            if ($part->path() !== null) {
+                if ($part->size() === 0) {
+                    return false;
+                }
+
+                $hasUpload = true;
+
+                continue;
+            }
+
+            if ($part->filename() !== null) {
+                $hasUpload = true;
+
+                continue;
+            }
+
+            if (isset($fields[$part->name()])) {
+                return false;
+            }
+
+            $fields[$part->name()] = true;
+        }
+
+        return $hasUpload;
+    }
+
+    private function attachMultipart(SwooleClient $client, Body $body): void
+    {
+        $fields = [];
+
+        foreach ($body->parts() as $part) {
+            if ($part->path() !== null) {
+                if ($client->addFile($part->path(), $part->name(), $part->contentType() ?? '', $part->filename() ?? '') === false) {
+                    throw new InvalidArgumentException('Unable to attach Swoole multipart file.');
+                }
+
+                continue;
+            }
+
+            if ($part->filename() !== null) {
+                if ($client->addData($part->content(), $part->name(), $part->contentType() ?? '', $part->filename()) === false) {
+                    throw new InvalidArgumentException('Unable to attach Swoole multipart data.');
+                }
+
+                continue;
+            }
+
+            $fields[$part->name()] = $part->content();
+        }
+
+        if ($fields !== [] && $client->setData($fields) === false) {
+            throw new InvalidArgumentException('Unable to configure Swoole multipart fields.');
+        }
+    }
+
+    /**
+     * @param array<array-key, string> $headers
+     *
+     * @return array<array-key, string>
+     */
+    private function withoutContentType(array $headers): array
+    {
+        foreach (array_keys($headers) as $name) {
+            if (strtolower((string) $name) === 'content-type') {
+                unset($headers[$name]);
+            }
+        }
+
+        return $headers;
     }
 
     /**

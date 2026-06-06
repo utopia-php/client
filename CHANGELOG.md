@@ -16,6 +16,8 @@ This project follows semantic versioning.
 - Request factories for JSON, XML, plain-text, form-encoded, query-string, raw-body, and multipart requests.
 - Direct response helpers for JSON, XML, plain-text, form-encoded, and multipart decoding, plus `contentType()` for the parameter-stripped media type.
 - End-to-end response streaming via `streamRequest()`, delivering the body to a sink chunk-by-chunk with bounded memory.
+- Bounded-memory request uploads on the cURL adapter, streaming the body through a read callback; `Stream\Factory::createStreamFromFile()` opens files lazily and `Stream::fromResource()` wraps a resource without copying it.
+- Bounded-memory multipart file uploads on both adapters via lazy `Part::file()` and the `Multipart\Body` stream: cURL streams the serialised body from disk, while Swoole streams each file with native `addFile()` (zero-copy `sendfile()`).
 - Typed PSR-18 exception hierarchy (`NetworkException`/`RequestException` and their subtypes) thrown by both adapters.
 - Immutable timeout helpers for total and connection timeouts.
 - Portable TLS configuration helpers — `withSslVerification()`, `withCustomCA()`, `withCertificate()`, `withMinTlsVersion()` — and the `Utopia\Client\Tls` enum.
