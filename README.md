@@ -74,12 +74,13 @@ Configured headers are defaults. If a request already has the same header, the r
 ```php
 <?php
 
+use Utopia\Psr7\ContentType;
 use Utopia\Psr7\Header;
 use Utopia\Psr7\Method;
 
 $request = $requestFactory
     ->createRequest(Method::GET, 'users')
-    ->withHeader(Header::ACCEPT, 'application/xml');
+    ->withHeader(Header::ACCEPT, ContentType::XML);
 ```
 
 Authentication helpers set the default `Authorization` header:

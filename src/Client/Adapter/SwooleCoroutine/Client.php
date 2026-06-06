@@ -95,7 +95,7 @@ class Client implements Adapter
             throw new InvalidUriException($request, 'Requests must use an absolute URI.');
         }
 
-        $this->validateSettings($request);
+        $this->validateSettings();
 
         try {
             $client = new SwooleClient(
@@ -223,7 +223,7 @@ class Client implements Adapter
         return $seconds;
     }
 
-    private function validateSettings(RequestInterface $request): void
+    private function validateSettings(): void
     {
         foreach ([self::SETTING_TIMEOUT, self::SETTING_CONNECT_TIMEOUT] as $setting) {
             if (!\array_key_exists($setting, $this->settings)) {
@@ -267,14 +267,10 @@ class Client implements Adapter
             return true;
         }
 
-        if (\in_array($code, $this->nativeCodes([
+        return \in_array($code, $this->nativeCodes([
             'SOCKET_ETIMEDOUT',
             'SWOOLE_ERROR_SOCKET_POLL_TIMEOUT',
-        ], [110]), true)) {
-            return true;
-        }
-
-        return false;
+        ], [110]), true);
     }
 
     private function networkException(RequestInterface $request, string $message, int $code, mixed $statusCode = null, ?Throwable $previous = null, mixed $headers = null): NetworkException

@@ -238,7 +238,7 @@ abstract class AdapterContract extends TestCase
 
             $response = $this->send($client, $request);
 
-            $this->assertSame((string) \strlen($body) . ':' . hash('sha256', $body), (string) $response->getBody());
+            $this->assertSame(\strlen($body) . ':' . hash('sha256', $body), (string) $response->getBody());
         });
     }
 
@@ -352,7 +352,7 @@ abstract class AdapterContract extends TestCase
 
             $response = $this->send($client, $request);
 
-            $this->assertSame((string) \strlen($body) . ':' . hash('sha256', $body), (string) $response->getBody());
+            $this->assertSame(\strlen($body) . ':' . hash('sha256', $body), (string) $response->getBody());
         });
     }
 

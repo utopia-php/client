@@ -42,5 +42,6 @@ final class ConstantsTest extends TestCase
         $this->assertSame('multipart/form-data', ContentType::MULTIPART_FORM_DATA);
         $this->assertSame('application/octet-stream', ContentType::OCTET_STREAM);
         $this->assertSame('text/plain', ContentType::PLAIN_TEXT);
+        $this->assertSame('application/xml', ContentType::XML);
     }
 }
