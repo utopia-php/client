@@ -14,6 +14,7 @@ use Utopia\Client\Adapter;
 use Utopia\Client\Tls;
 use Utopia\Psr7\Header;
 use Utopia\Psr7\Uri;
+use Utopia\Span\Span;
 
 final class Client implements ClientInterface
 {
@@ -23,6 +24,8 @@ final class Client implements ClientInterface
     private array $headers = [];
 
     private ?UriInterface $baseUri = null;
+
+    private bool $tracePropagation = false;
 
     public function __construct(
         private Adapter $adapter,
@@ -122,15 +125,23 @@ final class Client implements ClientInterface
     }
 
     /**
+     * Propagate the active trace downstream as a W3C Trace Context traceparent
+     * header. Off by default; requires an active utopia-php/span span.
+     */
+    public function withTracePropagation(bool $enabled = true): self
+    {
+        $clone = clone $this;
+        $clone->tracePropagation = $enabled;
+
+        return $clone;
+    }
+
+    /**
      * @throws ClientExceptionInterface
      */
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
-        return $this->adapter->sendRequest(
-            $this->applyHeaders(
-                $this->applyBaseUri($request),
-            ),
-        );
+        return $this->adapter->sendRequest($this->prepare($request));
     }
 
     /**
@@ -143,11 +154,15 @@ final class Client implements ClientInterface
      */
     public function streamRequest(RequestInterface $request, callable $sink): ResponseInterface
     {
-        return $this->adapter->streamRequest(
+        return $this->adapter->streamRequest($this->prepare($request), $sink);
+    }
+
+    private function prepare(RequestInterface $request): RequestInterface
+    {
+        return $this->applyTrace(
             $this->applyHeaders(
                 $this->applyBaseUri($request),
             ),
-            $sink,
         );
     }
 
@@ -180,6 +195,26 @@ final class Client implements ClientInterface
         }
 
         return $request;
+    }
+
+    /**
+     * Propagate the active trace downstream as a W3C Trace Context traceparent
+     * header. Skipped when disabled, no span is active, or the request already
+     * carries one, so an inbound trace is never overwritten.
+     */
+    private function applyTrace(RequestInterface $request): RequestInterface
+    {
+        if (!$this->tracePropagation) {
+            return $request;
+        }
+
+        $traceparent = Span::traceparent();
+
+        if ($traceparent === null || $request->hasHeader(Header::TRACEPARENT)) {
+            return $request;
+        }
+
+        return $request->withHeader(Header::TRACEPARENT, $traceparent);
     }
 
     private function resolvePath(string $basePath, string $path): string

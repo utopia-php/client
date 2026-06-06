@@ -42,6 +42,8 @@ final class Header
 
     public const string SET_COOKIE = 'Set-Cookie';
 
+    public const string TRACEPARENT = 'traceparent';
+
     public const string USER_AGENT = 'User-Agent';
 
     private function __construct() {}

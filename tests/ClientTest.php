@@ -14,6 +14,8 @@ use Utopia\Client\Adapter;
 use Utopia\Client\Tls;
 use Utopia\Psr7\Request;
 use Utopia\Psr7\Response;
+use Utopia\Span\Span;
+use Utopia\Span\Storage\Memory;
 use ValueError;
 
 final class ClientTest extends TestCase
@@ -138,6 +140,63 @@ final class ClientTest extends TestCase
         $client->withBaseUri('/api');
     }
 
+    public function testItPropagatesTheActiveTraceWithoutOverridingAnInboundOne(): void
+    {
+        $requestFactory = new Request\Factory();
+        $client = new Client(new RecordingAdapter())->withTracePropagation();
+
+        Span::setStorage(new Memory());
+        $span = Span::init('http.request');
+
+        try {
+            $propagated = $client->sendRequest(
+                $requestFactory->createRequest('GET', 'https://example.com'),
+            );
+            $forwarded = $client->sendRequest(
+                $requestFactory->createRequest('GET', 'https://example.com')
+                    ->withHeader('traceparent', 'incoming'),
+            );
+
+            $this->assertSame($span->getTraceparent(), $propagated->getHeaderLine('X-Request-Traceparent'));
+            $this->assertSame('incoming', $forwarded->getHeaderLine('X-Request-Traceparent'));
+        } finally {
+            $span->finish();
+            Span::setStorage(null);
+        }
+    }
+
+    public function testItDoesNotPropagateTracesByDefault(): void
+    {
+        $requestFactory = new Request\Factory();
+        $client = new Client(new RecordingAdapter());
+
+        Span::setStorage(new Memory());
+        $span = Span::init('http.request');
+
+        try {
+            $response = $client->sendRequest(
+                $requestFactory->createRequest('GET', 'https://example.com'),
+            );
+
+            $this->assertSame('', $response->getHeaderLine('X-Request-Traceparent'));
+        } finally {
+            $span->finish();
+            Span::setStorage(null);
+        }
+    }
+
+    public function testItLeavesRequestsUntouchedWithoutAnActiveSpan(): void
+    {
+        $requestFactory = new Request\Factory();
+        $client = new Client(new RecordingAdapter())->withTracePropagation();
+
+        $response = $client->sendRequest(
+            $requestFactory->createRequest('GET', 'https://example.com'),
+        );
+
+        $this->assertSame('', $response->getHeaderLine('X-Request-Traceparent'));
+    }
+
     public function testItStreamsThroughTheAdapterApplyingBaseUriAndHeaders(): void
     {
         $requestFactory = new Request\Factory();
@@ -237,7 +296,8 @@ final class RecordingAdapter implements Adapter
             ->withHeader('X-Request-Host', $request->getHeaderLine('Host'))
             ->withHeader('X-Request-Accept', $request->getHeaderLine('Accept'))
             ->withHeader('X-Request-Authorization', $request->getHeaderLine('Authorization'))
-            ->withHeader('X-Request-Trace', $request->getHeaderLine('X-Trace'));
+            ->withHeader('X-Request-Trace', $request->getHeaderLine('X-Trace'))
+            ->withHeader('X-Request-Traceparent', $request->getHeaderLine('traceparent'));
 
         if ($this->timeout !== null) {
             $response = $response->withHeader('X-Timeout', (string) $this->timeout);

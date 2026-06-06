@@ -20,6 +20,7 @@ This project follows semantic versioning.
 - Immutable timeout helpers for total and connection timeouts.
 - Portable TLS configuration helpers — `withSslVerification()`, `withCustomCA()`, `withCertificate()`, `withMinTlsVersion()` — and the `Utopia\Client\Tls` enum.
 - `Utopia\Client\Decorator\Retry` decorator with a pluggable `Strategy` and a default best-practice `Backoff` strategy (idempotent methods only, transient transport failures and `429`/`502`/`503`/`504`, exponential backoff with jitter, `Retry-After` honoured).
+- Opt-in W3C Trace Context propagation via `withTracePropagation()` (off by default): forwards the active `utopia-php/span` trace downstream as a `traceparent` header.
 - `Utopia\Client\Decorator` base class for composing adapter decorators.
 - PHP 8.4+ tooling with Pint, PHPStan level 10, Rector, PHPUnit, Composer audit, and GitHub Actions CI.
 - Local PSR/RFC spec copies and translated testing requirements.
