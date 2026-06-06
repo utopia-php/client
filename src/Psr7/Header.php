@@ -38,6 +38,8 @@ final class Header
 
     public const string REFERER = 'Referer';
 
+    public const string RETRY_AFTER = 'Retry-After';
+
     public const string SET_COOKIE = 'Set-Cookie';
 
     public const string USER_AGENT = 'User-Agent';
