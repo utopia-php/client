@@ -49,5 +49,11 @@ jobs:
       - name: Check refactors
         run: composer refactor:check
 
+      - name: Debug segfault
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y gdb
+          gdb -batch -ex run -ex 'bt' -ex 'info sharedlibrary' --args "$(which php)" vendor/bin/phpunit --configuration phpunit.xml --testsuite default 2>&1 | tail -80
+
       - name: Test
         run: composer test
