@@ -49,13 +49,5 @@ jobs:
       - name: Check refactors
         run: composer refactor:check
 
-      - name: Test (diagnostic)
-        continue-on-error: true
-        run: |
-          echo "default memory_limit: $(php -r 'echo ini_get(\"memory_limit\");')"
-          echo "=== default suite, errors surfaced, unbounded memory ==="
-          php -d memory_limit=-1 -d display_errors=stderr -d log_errors=1 -d error_reporting=E_ALL \
-            vendor/bin/phpunit --configuration phpunit.xml --testsuite default 2>&1 | tail -50
-
       - name: Test
         run: composer test

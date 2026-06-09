@@ -30,7 +30,7 @@ final class Client implements Adapter
         private Adapter $adapter,
     ) {}
 
-    public function withTimeout(float $seconds): self
+    public function withTimeout(float $seconds): static
     {
         $clone = clone $this;
         $clone->adapter = $this->adapter->withTimeout($seconds);
@@ -38,7 +38,7 @@ final class Client implements Adapter
         return $clone;
     }
 
-    public function withConnectTimeout(float $seconds): self
+    public function withConnectTimeout(float $seconds): static
     {
         $clone = clone $this;
         $clone->adapter = $this->adapter->withConnectTimeout($seconds);
@@ -46,7 +46,7 @@ final class Client implements Adapter
         return $clone;
     }
 
-    public function withSslVerification(bool $enabled = true): self
+    public function withSslVerification(bool $enabled = true): static
     {
         $clone = clone $this;
         $clone->adapter = $this->adapter->withSslVerification($enabled);
@@ -54,7 +54,7 @@ final class Client implements Adapter
         return $clone;
     }
 
-    public function withCustomCA(string $path): self
+    public function withCustomCA(string $path): static
     {
         $clone = clone $this;
         $clone->adapter = $this->adapter->withCustomCA($path);
@@ -62,7 +62,7 @@ final class Client implements Adapter
         return $clone;
     }
 
-    public function withCertificate(string $certPath, string $keyPath, ?string $passphrase = null): self
+    public function withCertificate(string $certPath, string $keyPath, ?string $passphrase = null): static
     {
         $clone = clone $this;
         $clone->adapter = $this->adapter->withCertificate($certPath, $keyPath, $passphrase);
@@ -70,7 +70,7 @@ final class Client implements Adapter
         return $clone;
     }
 
-    public function withMinTlsVersion(Tls $version): self
+    public function withMinTlsVersion(Tls $version): static
     {
         $clone = clone $this;
         $clone->adapter = $this->adapter->withMinTlsVersion($version);
@@ -78,7 +78,7 @@ final class Client implements Adapter
         return $clone;
     }
 
-    public function withConnectionReuse(bool $enabled = true): self
+    public function withConnectionReuse(bool $enabled = true): static
     {
         $clone = clone $this;
         $clone->adapter = $this->adapter->withConnectionReuse($enabled);
@@ -89,7 +89,7 @@ final class Client implements Adapter
     /**
      * @param array<string, string|array<int, string>> $headers
      */
-    public function withHeaders(array $headers): self
+    public function withHeaders(array $headers): static
     {
         $clone = clone $this;
 
@@ -103,7 +103,7 @@ final class Client implements Adapter
         return $clone;
     }
 
-    public function withBaseUri(UriInterface|string $uri): self
+    public function withBaseUri(UriInterface|string $uri): static
     {
         $uri = $uri instanceof UriInterface ? $uri : Uri::parse($uri);
 
@@ -117,14 +117,14 @@ final class Client implements Adapter
         return $clone;
     }
 
-    public function withBasicAuth(string $username, string $password): self
+    public function withBasicAuth(string $username, string $password): static
     {
         return $this->withHeaders([
             Header::AUTHORIZATION => 'Basic ' . base64_encode($username . ':' . $password),
         ]);
     }
 
-    public function withBearerAuth(string $token): self
+    public function withBearerAuth(string $token): static
     {
         return $this->withHeaders([
             Header::AUTHORIZATION => 'Bearer ' . $token,
@@ -135,7 +135,7 @@ final class Client implements Adapter
      * Propagate the active trace downstream as a W3C Trace Context traceparent
      * header. Off by default; requires an active utopia-php/span span.
      */
-    public function withTracePropagation(bool $enabled = true): self
+    public function withTracePropagation(bool $enabled = true): static
     {
         $clone = clone $this;
         $clone->tracePropagation = $enabled;
